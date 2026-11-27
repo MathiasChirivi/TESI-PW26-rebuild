@@ -4,9 +4,9 @@ Ricostruzione per fasi verificabili del Project Work PW26: un agente basato su u
 modello linguistico che consulta e aggiorna il magazzino di una PMI tramite un
 server MCP collegato a un back-end SQLite, governato da un harness Python.
 
-> **Stato: Giorno 1 – perimetro e setup.** Il repository contiene solo questo README
-> e il `.gitignore`. Codice, base dati, test e istruzioni di installazione verranno
-> aggiunti nelle fasi successive, man mano che vengono verificati.
+> **Stato: Giorno 2 – base dati.** Il repository contiene lo schema SQLite e lo script
+> che genera i dati sintetici. Back-end, server MCP, harness e test verranno aggiunti
+> nelle fasi successive, man mano che vengono verificati.
 
 ## Caso aziendale
 
@@ -57,6 +57,33 @@ Tre parti indipendenti:
 Il modello non accede mai direttamente ai dati: può solo chiedere all'harness di
 invocare un tool.
 
+## Base dati
+
+Lo schema è in `db/schema.sql`. Lo script `scripts/popola_db.py` crea il database e lo
+popola con dati sintetici; usa solo la libreria standard di Python 3.
+
+Per generare il database nel percorso predefinito, `data/magazzino.db`, esegui dalla
+radice del repository:
+
+```bash
+python3 scripts/popola_db.py --seme 42 --oggi 2026-11-24
+```
+
+| Opzione | Significato | Predefinito |
+|---|---|---|
+| `--db PERCORSO` | File SQLite da creare. Se esiste già, viene eliminato e ricreato. | `data/magazzino.db` |
+| `--seme N` | Seme del generatore casuale. A parità di seme e di data, ogni esecuzione produce esattamente gli stessi dati. | `42` |
+| `--oggi AAAA-MM-GG` | Data di riferimento. Lo storico dei movimenti copre i 180 giorni precedenti e le date degli ordini sono calcolate a partire da questa data. | la data del giorno |
+
+Se ometti `--oggi`, la data cambia ogni giorno e cambiano anche i dati generati: per
+risultati ripetibili, fissa sia `--seme` sia `--oggi`.
+
+Con `--seme 42 --oggi 2026-11-24` si ottengono 10 fornitori, 132 articoli (10 sotto
+scorta), 1.675 movimenti, 40 ordini ai fornitori e 276 righe d'ordine. Per ogni
+articolo la giacenza è uguale alla somma dei movimenti e non è mai negativa.
+
+Il database generato e la cartella `data/` non si versionano (vedi `.gitignore`).
+
 ## I cinque tool
 
 | Tool | Tipo | Parametri | Effetti sui dati |
@@ -106,7 +133,7 @@ in questa ricostruzione.
 | Fase | Contenuto | Stato |
 |---|---|---|
 | 1 | Perimetro e setup: repository, `.gitignore`, README | Completata |
-| 2 | Base dati: schema e popolamento sintetico con seme e data fissati | Da fare |
+| 2 | Base dati: schema e popolamento sintetico con seme e data fissati | Completata |
 | 3 | Back-end e relativi test | Da fare |
 | 4 | Server MCP con i cinque tool via `stdio` | Da fare |
 | 5 | Harness: ciclo agentico, client MCP, prompt, modelli, conferme, log | Da fare |
