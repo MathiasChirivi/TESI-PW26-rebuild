@@ -4,9 +4,9 @@ Ricostruzione per fasi verificabili del Project Work PW26: un agente basato su u
 modello linguistico che consulta e aggiorna il magazzino di una PMI tramite un
 server MCP collegato a un back-end SQLite, governato da un harness Python.
 
-> **Stato: Giorno 2 – base dati.** Il repository contiene lo schema SQLite e lo script
-> che genera i dati sintetici. Back-end, server MCP, harness e test verranno aggiunti
-> nelle fasi successive, man mano che vengono verificati.
+> **Stato: Giorno 3 – back-end.** Il repository contiene lo schema SQLite, lo script
+> che genera i dati sintetici, il back-end del magazzino e i suoi test. Server MCP e
+> harness verranno aggiunti nelle fasi successive, man mano che vengono verificati.
 
 ## Caso aziendale
 
@@ -84,6 +84,45 @@ articolo la giacenza è uguale alla somma dei movimenti e non è mai negativa.
 
 Il database generato e la cartella `data/` non si versionano (vedi `.gitignore`).
 
+## Back-end
+
+Il package `magazzino/` contiene la classe `Magazzino`, che apre il database SQLite
+con le chiavi esterne attive ed espone cinque operazioni. Tutte restituiscono
+dizionari e liste pronti per il JSON.
+
+| Operazione | Tipo | Cosa fa |
+|---|---|---|
+| `giacenza_articolo(ricerca)` | Lettura | Cerca per codice esatto, senza distinguere maiuscole e minuscole, oppure per parole della descrizione. Restituisce giacenza, scorta minima e fornitore abituale, con al massimo 20 risultati. |
+| `articoli_sotto_scorta()` | Lettura | Elenca gli articoli con giacenza inferiore alla scorta minima, con la quantità mancante e il fornitore abituale. |
+| `movimenti_articolo(codice, data_da=None, data_a=None)` | Lettura | Carichi e scarichi di un articolo tra due date, estremi inclusi, con i totali. Senza date considera gli ultimi 30 giorni. |
+| `registra_movimento(codice, tipo, quantita, riferimento=None)` | Scrittura | Registra un `carico` o uno `scarico` e aggiorna la giacenza nella stessa transazione. Uno scarico oltre la giacenza è rifiutato e non modifica nulla. |
+| `crea_ordine_fornitore(id_fornitore, righe)` | Scrittura | Crea un ordine in stato `creato`. Ogni articolo deve avere quel fornitore come abituale e comparire una sola volta. Se una riga non è valida, l'ordine non viene creato. |
+
+Gli errori sono eccezioni con un messaggio in italiano: `ParametroNonValido`,
+`ArticoloNonTrovato`, `FornitoreNonTrovato` e `GiacenzaInsufficiente`, tutte
+sottoclassi di `ErroreMagazzino`.
+
+## Test
+
+I test del back-end usano solo la libreria standard. Ognuno genera un database
+sintetico temporaneo con seme 42, che viene eliminato alla fine, quindi non serve
+creare prima `data/magazzino.db`. Dalla radice del repository:
+
+```bash
+python3 -m unittest -v tests.test_backend
+```
+
+I 10 test controllano:
+- la coerenza fra giacenze e movimenti dei dati generati;
+- la ricerca degli articoli;
+- l'elenco degli articoli sotto scorta e i movimenti di un articolo;
+- carichi e scarichi;
+- il rifiuto dei parametri non validi;
+- la creazione degli ordini.
+
+Verificano anche che uno scarico oltre la giacenza e un ordine non valido lascino
+la base dati invariata.
+
 ## I cinque tool
 
 | Tool | Tipo | Parametri | Effetti sui dati |
@@ -134,7 +173,7 @@ in questa ricostruzione.
 |---|---|---|
 | 1 | Perimetro e setup: repository, `.gitignore`, README | Completata |
 | 2 | Base dati: schema e popolamento sintetico con seme e data fissati | Completata |
-| 3 | Back-end e relativi test | Da fare |
+| 3 | Back-end e relativi test | Completata |
 | 4 | Server MCP con i cinque tool via `stdio` | Da fare |
 | 5 | Harness: ciclo agentico, client MCP, prompt, modelli, conferme, log | Da fare |
 | 6 | CLI ed entry point; prova con Ollama se disponibile | Da fare |
